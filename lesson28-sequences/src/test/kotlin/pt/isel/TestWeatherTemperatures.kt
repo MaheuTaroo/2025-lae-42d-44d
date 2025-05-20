@@ -94,7 +94,7 @@ class TestWeatherTemperatures {
                     iters++
                     it.weatherDesc
                 }
-                .first()
+                //.first()
         // assertEquals("Light rain shower", desc)
         /**
          * NO Processing WITHOUT a terminal operation
@@ -147,6 +147,17 @@ class TestWeatherTemperatures {
         assertContentEquals(
             sequenceOf(1, 2, 4, 5, null, 3, 7, 9),
             actual,
+        )
+    }
+
+    @Test
+    fun testLazyConcatenation() {
+        val actual =
+            sequenceOf(23, 11, 32, 0).lazyConcat(7, 9)
+
+        assertContentEquals(
+            sequenceOf(23, 11, 32, 0, 7, 9),
+            actual
         )
     }
 }

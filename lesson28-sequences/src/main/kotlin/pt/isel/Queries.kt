@@ -44,6 +44,53 @@ fun <T, R> Sequence<T>.lazyMap(transform: (T) -> R): Sequence<R> =
 /**
  * DOES NOT SUPPORT Sequences with null elements
  */
-fun <T> Sequence<T>.lazyDistinct(): Sequence<T> {
-    TODO()
-}
+fun <T> Sequence<T>.lazyDistinct(): Sequence<T> =
+    object : Sequence<T> {
+        override fun iterator() =
+            object : Iterator<T> {
+                val iter = this@lazyDistinct.iterator()
+                var next = iter.next()
+                val set = mutableSetOf(next)
+                var traversed = true
+
+                override fun hasNext(): Boolean {
+                    if (traversed)
+                        return iter.hasNext()
+
+                    traversed = true
+                    while (iter.hasNext() && !set.add(next))
+                        next = iter.next()
+
+                    return iter.hasNext()
+                }
+
+                override fun next(): T {
+                    if (traversed) {
+                        traversed = false
+
+                        return next
+                    }
+
+                    if (!hasNext()) throw NoSuchElementException()
+                    return next
+                }
+            }
+    }
+
+fun <T> Sequence<T>.lazyConcat(vararg elems: T) =
+    object : Sequence<T> {
+        override fun iterator() =
+            object : Iterator<T> {
+                val base = this@lazyConcat.iterator()
+                val args = elems.iterator()
+
+                override fun hasNext() =
+                    base.hasNext() || args.hasNext()
+
+                override fun next() =
+                    if (base.hasNext())
+                        base.next()
+                    else
+                        args.next()
+            }
+    }

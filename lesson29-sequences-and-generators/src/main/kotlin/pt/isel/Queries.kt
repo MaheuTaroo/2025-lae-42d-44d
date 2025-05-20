@@ -50,25 +50,124 @@ fun <T, R> Sequence<T>.lazyMap(transform: (T) -> R): Sequence<R> =
             }
     }
 
-fun <T> Sequence<T>.lazyDistinct(): Sequence<T> {
-    TODO()
+fun <T> Sequence<T>.lazyDistinct() =
+    object : Sequence<T> {
+        override fun iterator() =
+            object : Iterator<T> {
+                val iter = this@lazyDistinct.iterator()
+                var next = iter.next()
+                val set = mutableSetOf(next)
+                var traversed = true
+
+                override fun hasNext(): Boolean {
+                    if (traversed)
+                        return iter.hasNext()
+
+                    traversed = true
+                    while (iter.hasNext() && !set.add(next))
+                        next = iter.next()
+
+                    return iter.hasNext()
+                }
+
+                override fun next(): T {
+                    if (traversed) {
+                        traversed = false
+
+                        return next
+                    }
+
+                    if (!hasNext()) throw NoSuchElementException()
+                    return next
+                }
+            }
+    }
+
+fun <T> Sequence<T>.lazyConcat(other: Sequence<T>) =
+    object : Sequence<T> {
+        override fun iterator() =
+            object : Iterator<T> {
+                val base = this@lazyConcat.iterator()
+                val args = other.iterator()
+
+                override fun hasNext() =
+                    base.hasNext() || args.hasNext()
+
+                override fun next() =
+                    if (base.hasNext())
+                        base.next()
+                    else
+                        args.next()
+            }
+    }
+
+fun <T> Sequence<T>.suspConcat(other: Sequence<T>) = sequence {
+    yieldAll(this@suspConcat)
+    yieldAll(other)
 }
 
-fun <T> Sequence<T>.lazyConcat(other: Sequence<T>): Sequence<T> {
-    TODO()
-}
-fun <T> Sequence<T>.suspConcat(other: Sequence<T>): Sequence<T> {
-    TODO()
-}
-fun <T : Any?> Sequence<T>.collapse(): Sequence<T> {
-    TODO()
+fun <T : Any?> Sequence<T>.collapse() = sequence {
+    val iter = this@collapse.iterator()
+    if (!iter.hasNext())
+        return@sequence
+
+    var curr = iter.next()
+    yield(curr)
+
+    for (i in this@collapse) {
+        if (i == curr)
+            continue
+
+        curr = i
+        yield(i)
+    }
 }
 
-fun <T> Sequence<T>.suspDistinct(): Sequence<T> {
-    TODO()
+fun <T> Sequence<T>.suspDistinct() = sequence {
+    val set = mutableSetOf<T>()
+    for (it in this@suspDistinct) {
+        if (set.add(it))
+            yield(it)
+    }
 }
 
-public fun <T, R, V> Sequence<T>.suspZip(other: Sequence<R>, transform: (a: T, b: R) -> V): Sequence<V> {
-    TODO()
+fun <T, R, V> Sequence<T>.suspZip(other: Sequence<R>, transform: (a: T, b: R) -> V) = sequence<V> {
+    val base = this@suspZip.iterator()
+    val secondary = other.iterator()
+
+    while (base.hasNext() && secondary.hasNext())
+        yield(transform(base.next(), secondary.next()))
 }
 
+fun <T : Any?> Sequence<T>.lazyCollapse() =
+    object : Sequence<T> {
+        override fun iterator() =
+            object : Iterator<T> {
+                val iter = this@lazyCollapse.iterator()
+                var traversed = true
+                var latest = iter.next()
+
+                override fun hasNext(): Boolean {
+                    if (traversed) {
+                        return iter.hasNext()
+                    }
+
+                    if (!iter.hasNext())
+                        return false
+
+                    while (iter.hasNext()) {
+                        val curr = iter.next()
+
+                        if (curr != latest) {
+                            
+                            return true
+                        }
+                    }
+                    return false
+                }
+
+                override fun next() =
+                    items.last()
+            }
+
+    }

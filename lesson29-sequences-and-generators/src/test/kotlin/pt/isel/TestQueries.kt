@@ -2,6 +2,7 @@ package pt.isel
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 
 class TestQueries {
     @Test
@@ -20,6 +21,16 @@ class TestQueries {
         val res = sequence1.suspConcat(sequence2)
 
         assertEquals(listOf("a", "b", "z", "x", "y"), res.toList())
+    }
+
+    @Test
+    fun testSuspDistinct() {
+        val actual = sequenceOf(1, 2, 3, 4, null, 5, 12, 7, 1, null, 5, 3, 12, 9)
+
+        assertContentEquals(
+            sequenceOf(1, 2, 3, 4, null, 5, 12, 7, 9),
+            actual.suspDistinct()
+        )
     }
 
     @Test
@@ -50,5 +61,13 @@ class TestQueries {
 
         // Zipping stops at the shortest sequence
         assertEquals(listOf("10-x", "20-y"), result)
+    }
+
+    @Test
+    fun testLazyCollapse() {
+        val sequence = sequenceOf(null, null, 1, 2, 2, 7, 2, 1, 7, null, 1, 9, 9)
+        val res = sequence.lazyCollapse()
+
+        assertEquals(listOf(null, 1, 2, 7, 2, 1, 7, null, 1, 9), res.toList())
     }
 }
